@@ -12,6 +12,7 @@ import numpy as np
 from scipy.sparse import bsr_matrix
 import warnings
 from .new import CachedDataset, ShuffledDataset, find_threshold
+import copy
 
 default_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -219,7 +220,7 @@ class BatchedANIDataset(PaddedBatchChunkDataset):
 def load_ani_dataset(path, species_tensor_converter, batch_size, shuffle=True,
                      rm_outlier=False, properties=('energies',), atomic_properties=(),
                      transform=(), dtype=torch.get_default_dtype(), device=default_device,
-                     split=(None,)):
+                     split=(None,), transform_after_rm_outlier=()):
     """Load ANI dataset from hdf5 files, and split into subsets.
 
     The return datasets are already a dataset of batches, so when iterated, a
@@ -298,14 +299,23 @@ def load_ani_dataset(path, species_tensor_converter, batch_size, shuffle=True,
     .. _pyanitools.py:
         https://github.com/isayev/ASE_ANI/blob/master/lib/pyanitools.py
     """
-    atomic_properties_, properties_ = load_and_pad_whole_dataset(
+    original_atomic_properties_, original_properties_ = load_and_pad_whole_dataset(
         path, species_tensor_converter, shuffle, properties, atomic_properties)
 
-    molecules = atomic_properties_['species'].shape[0]
+    molecules = original_atomic_properties_['species'].shape[0]
     atomic_keys = ['species', 'coordinates', *atomic_properties]
     keys = properties
 
     # do transformations on data
+
+    #copy the original dics in order to preserve for the re fit of linear model
+    atomic_properties_, properties_ = {}, {}
+    for key, val in original_atomic_properties_.items():
+        atomic_properties_[key] = val.clone()
+    for key, val in original_properties_.items():
+        properties_[key] = val.clone()
+
+    # I need to keep the original ones in order to be able to re run the linear model
     for t in transform:
         atomic_properties_, properties_ = t(atomic_properties_, properties_)
 
@@ -326,10 +336,15 @@ def load_ani_dataset(path, species_tensor_converter, batch_size, shuffle=True,
         if outlier_count > 0:
             print("Note: {} outlier energy conformers have been discarded from dataset".format(outlier_count))
             for key, val in atomic_properties_.items():
+                original_atomic_properties_[key] = original_atomic_properties_[key][low_idx]
                 atomic_properties_[key] = val[low_idx]
             for key, val in properties_.items():
+                original_properties_[key] = original_properties_[key][low_idx]
                 properties_[key] = val[low_idx]
             molecules = low_idx.numel()
+            # RECOMPUTE LINEAR MODEL AFTER REMOVING OUTLIERS
+            for t in transform_after_rm_outlier:
+                atomic_properties_, properties_ = t(original_atomic_properties_, original_properties_)
 
     # compute size of each subset
     split_ = []

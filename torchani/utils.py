@@ -169,9 +169,15 @@ class EnergyShifter(torch.nn.Module):
         X = (species.unsqueeze(-1) == present_species_).sum(dim=1).to(torch.double)
         # Concatenate a vector of ones to find fit intercept
         if self.fit_intercept:
+            print('Intercept is included')
             X = torch.cat((X, torch.ones(X.shape[0], 1).to(torch.double)), dim=-1)
         y = energies.unsqueeze(dim=-1)
-        coeff_, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
+        coeff_, sum_residuals_, rank_, sv_ = np.linalg.lstsq(X, y, rcond=None)
+        residuals= torch.mm(X, torch.DoubleTensor(coeff_)) - y
+        print('Sum residuals**2 {}, normalized {}'.format(sum_residuals_, sum_residuals_/X.shape[0]))
+        print('Max residual {}, min residual {}, std residuals {}'.format(torch.max(residuals), torch.min(residuals), torch.std(residuals)))
+        print('sum of the residuals {} (Should be zero: {})'.format(torch.sum(residuals), self.fit_intercept))
+        print('Regresion coeffs', coeff_)
         return coeff_.squeeze(-1)
 
     def sae(self, species):
