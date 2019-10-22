@@ -28,9 +28,8 @@ import torch.utils.tensorboard
 import tqdm
 
 
-def main_training(get_network, optimizer_for_network, do_transform_after=True, tensorboard_folder=''):
-
-
+def main_training(get_network, optimizer_for_network, data_file: str,
+                  do_transform_after=True, tensorboard_folder=''):
 
     # device to run the training
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -83,7 +82,7 @@ def main_training(get_network, optimizer_for_network, do_transform_after=True, t
         path = os.path.dirname(os.path.realpath(__file__))
     except NameError:
         path = os.getcwd()
-    dspath = os.path.join(path, '../dataset/ani1-up_to_gdb4')
+    dspath = os.path.join(path, '../dataset', data_file)
 
     batch_size = 2560
 
@@ -97,7 +96,7 @@ def main_training(get_network, optimizer_for_network, do_transform_after=True, t
         transform=[energy_shifter_before.subtract_from_dataset], split=[0.8, None],
         transform_after_rm_outlier=transformations_after
     )
-
+    print(1)
     # print('Self atomic energies before rm outliers: ', energy_shifter_before.self_energies)
     # print('Self atomic energies: ', energy_shifter.self_energies)
 
@@ -594,5 +593,9 @@ if __name__ == '__main__':
     # optimizer_for_network = get_optimizers_for_BN_notAEV_network
 
     get_network = get_BN_network
-    optimizer_for_network =get_optimizers_for_BN_network
-    main_training(get_network, optimizer_for_network, do_transform_after=True, tensorboard_folder='runs/BN')
+    optimizer_for_network = get_optimizers_for_BN_network
+    main_training(get_network,
+                  optimizer_for_network,
+                  data_file='ani1-up_to_gdb4',
+                  do_transform_after=True,
+                  tensorboard_folder='runs/BN')
