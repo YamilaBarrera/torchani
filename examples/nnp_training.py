@@ -28,7 +28,7 @@ import torch.utils.tensorboard
 import tqdm
 
 
-def main_training(get_network, optimizer_for_network, do_transform_after=True):
+def main_training(get_network, optimizer_for_network, do_transform_after=True, tensorboard_folder=''):
 
 
 
@@ -230,7 +230,7 @@ def main_training(get_network, optimizer_for_network, do_transform_after=True):
 
     ###############################################################################
     # We will also use TensorBoard to visualize our training process
-    tensorboard = torch.utils.tensorboard.SummaryWriter()
+    tensorboard = torch.utils.tensorboard.SummaryWriter(tensorboard_folder)
 
     ###############################################################################
     # Finally, we come to the training loop.
@@ -590,9 +590,9 @@ if __name__ == '__main__':
     # get_network = get_original_network
     # optimizer_for_network = get_optimizers_for_original_network
     #
-    get_network = get_BN_notAEV_network
-    optimizer_for_network = get_optimizers_for_BN_notAEV_network
+    # get_network = get_BN_notAEV_network
+    # optimizer_for_network = get_optimizers_for_BN_notAEV_network
 
-    # get_network = get_BN_network
-    # optimizer_for_network =get_optimizers_for_BN_network
-    main_training(get_network, optimizer_for_network, do_transform_after=True)
+    get_network = get_BN_network
+    optimizer_for_network =get_optimizers_for_BN_network
+    main_training(get_network, optimizer_for_network, do_transform_after=True, tensorboard_folder='runs/BN')
