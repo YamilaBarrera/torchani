@@ -30,7 +30,6 @@ import tqdm
 
 def main_training(get_network, optimizer_for_network, data_file: str,
                   do_transform_after=True, tensorboard_folder=''):
-
     # device to run the training
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -55,9 +54,14 @@ def main_training(get_network, optimizer_for_network, data_file: str,
     Rcr = 5.2000e+00
     Rca = 3.5000e+00
     EtaR = torch.tensor([1.6000000e+01], device=device)
-    ShfR = torch.tensor([9.0000000e-01, 1.1687500e+00, 1.4375000e+00, 1.7062500e+00, 1.9750000e+00, 2.2437500e+00, 2.5125000e+00, 2.7812500e+00, 3.0500000e+00, 3.3187500e+00, 3.5875000e+00, 3.8562500e+00, 4.1250000e+00, 4.3937500e+00, 4.6625000e+00, 4.9312500e+00], device=device)
+    ShfR = torch.tensor(
+        [9.0000000e-01, 1.1687500e+00, 1.4375000e+00, 1.7062500e+00, 1.9750000e+00, 2.2437500e+00, 2.5125000e+00,
+         2.7812500e+00, 3.0500000e+00, 3.3187500e+00, 3.5875000e+00, 3.8562500e+00, 4.1250000e+00, 4.3937500e+00,
+         4.6625000e+00, 4.9312500e+00], device=device)
     Zeta = torch.tensor([3.2000000e+01], device=device)
-    ShfZ = torch.tensor([1.9634954e-01, 5.8904862e-01, 9.8174770e-01, 1.3744468e+00, 1.7671459e+00, 2.1598449e+00, 2.5525440e+00, 2.9452431e+00], device=device)
+    ShfZ = torch.tensor(
+        [1.9634954e-01, 5.8904862e-01, 9.8174770e-01, 1.3744468e+00, 1.7671459e+00, 2.1598449e+00, 2.5525440e+00,
+         2.9452431e+00], device=device)
     EtaA = torch.tensor([8.0000000e+00], device=device)
     ShfA = torch.tensor([9.0000000e-01, 1.5500000e+00, 2.2000000e+00, 2.8500000e+00], device=device)
     num_species = 4
@@ -89,7 +93,6 @@ def main_training(get_network, optimizer_for_network, data_file: str,
     transformations_after = []
     if do_transform_after:
         transformations_after = [energy_shifter.subtract_from_dataset]
-
 
     training, validation = torchani.data.load_ani_dataset(
         dspath, species_to_tensor, batch_size, rm_outlier=True, device=device,
@@ -127,7 +130,6 @@ def main_training(get_network, optimizer_for_network, data_file: str,
     ###############################################################################
     # Now let's define atomic neural networks.
 
-
     C_network, H_network, N_network, O_network, nn = get_network()
     print(nn)
 
@@ -150,7 +152,6 @@ def main_training(get_network, optimizer_for_network, data_file: str,
                 torch.nn.init.zeros_(m.bias)
             except AttributeError:
                 pass
-
 
     nn.apply(init_params)
 
@@ -188,7 +189,7 @@ def main_training(get_network, optimizer_for_network, data_file: str,
     #
     # We first read the checkpoint files to restart training. We use `latest.pt`
     # to store current training state.
-    latest_checkpoint = 'latest.pt'
+    latest_checkpoint = os.path.join(tensorboard_folder, 'latest.pt')
 
     ###############################################################################
     # Resume training from previously saved checkpoints:
@@ -204,11 +205,9 @@ def main_training(get_network, optimizer_for_network, data_file: str,
     # During training, we need to validate on validation set and if validation error
     # is better than the best, then save the new best model to a checkpoint
 
-
     # helper function to convert energy unit from Hartree to kcal/mol
     def hartree2kcal(x):
         return 627.509 * x
-
 
     def validate():
         # run validation
@@ -226,7 +225,6 @@ def main_training(get_network, optimizer_for_network, data_file: str,
             count += predicted_energies.shape[0]
         return hartree2kcal(math.sqrt(total_mse / count))
 
-
     ###############################################################################
     # We will also use TensorBoard to visualize our training process
     tensorboard = torch.utils.tensorboard.SummaryWriter(tensorboard_folder)
@@ -242,7 +240,7 @@ def main_training(get_network, optimizer_for_network, data_file: str,
     print("training starting from epoch", AdamW_scheduler.last_epoch + 1)
     max_epochs = 500
     early_stopping_learning_rate = 1.0E-5
-    best_model_checkpoint = 'best.pt'
+    best_model_checkpoint = os.path.join(tensorboard_folder, 'best.pt')
 
     for _ in range(AdamW_scheduler.last_epoch + 1, max_epochs):
         rmse = validate()
@@ -254,8 +252,8 @@ def main_training(get_network, optimizer_for_network, data_file: str,
             break
 
         # checkpoint
-        # if AdamW_scheduler.is_better(rmse, AdamW_scheduler.best):
-        #     torch.save(nn.state_dict(), best_model_checkpoint)
+        if AdamW_scheduler.is_better(rmse, AdamW_scheduler.best):
+            torch.save(nn.state_dict(), best_model_checkpoint)
 
         AdamW_scheduler.step(rmse)
         SGD_scheduler.step(rmse)
@@ -265,9 +263,9 @@ def main_training(get_network, optimizer_for_network, data_file: str,
         tensorboard.add_scalar('learning_rate', learning_rate, AdamW_scheduler.last_epoch)
 
         for i, (batch_x, batch_y) in tqdm.tqdm(
-            enumerate(training),
-            total=len(training),
-            desc="epoch {}".format(AdamW_scheduler.last_epoch)
+                enumerate(training),
+                total=len(training),
+                desc="epoch {}".format(AdamW_scheduler.last_epoch)
         ):
 
             true_energies = batch_y['energies']
@@ -292,17 +290,16 @@ def main_training(get_network, optimizer_for_network, data_file: str,
             # write current batch loss to TensorBoard
             tensorboard.add_scalar('batch_loss', loss, AdamW_scheduler.last_epoch * len(training) + i)
 
-        # torch.save({
-        #     'nn': nn.state_dict(),
-        #     'AdamW': AdamW.state_dict(),
-        #     'SGD': SGD.state_dict(),
-        #     'AdamW_scheduler': AdamW_scheduler.state_dict(),
-        #     'SGD_scheduler': SGD_scheduler.state_dict(),
-        # }, latest_checkpoint)
+        torch.save({
+            'nn': nn.state_dict(),
+            'AdamW': AdamW.state_dict(),
+            'SGD': SGD.state_dict(),
+            'AdamW_scheduler': AdamW_scheduler.state_dict(),
+            'SGD_scheduler': SGD_scheduler.state_dict(),
+        }, latest_checkpoint)
 
 
 def get_optimizers_for_original_network(C_network, H_network, N_network, O_network):
-
     AdamW = torchani.optim.AdamW([
         # H networks
         {'params': [H_network[0].weight]},
@@ -425,7 +422,6 @@ def get_optimizers_for_BN_notAEV_network(C_network, H_network, N_network, O_netw
 
 
 def get_BN_network():
-
     H_network = torch.nn.Sequential(
         torch.nn.BatchNorm1d(384),
         torch.nn.Linear(384, 96, bias=False),
@@ -486,7 +482,6 @@ def get_BN_network():
 
 
 def get_BN_notAEV_network():
-
     H_network = torch.nn.Sequential(
         torch.nn.Linear(384, 96, bias=False),
         torch.nn.BatchNorm1d(96),
@@ -540,7 +535,6 @@ def get_BN_notAEV_network():
     )
     nn = torchani.ANIModel([H_network, C_network, N_network, O_network])
     return C_network, H_network, N_network, O_network, nn
-
 
 
 def get_original_network():
@@ -586,16 +580,16 @@ def get_original_network():
 
 if __name__ == '__main__':
     # Define network
-    # get_network = get_original_network
-    # optimizer_for_network = get_optimizers_for_original_network
+    get_network = get_original_network
+    optimizer_for_network = get_optimizers_for_original_network
     #
     # get_network = get_BN_notAEV_network
     # optimizer_for_network = get_optimizers_for_BN_notAEV_network
 
-    get_network = get_BN_network
-    optimizer_for_network = get_optimizers_for_BN_network
+    # get_network = get_BN_network
+    # optimizer_for_network = get_optimizers_for_BN_network
     main_training(get_network,
                   optimizer_for_network,
-                  data_file='ani1-up_to_gdb4',
+                  data_file='ani1-up_to_gdb4/ani_gdb_s03.h5',
                   do_transform_after=True,
-                  tensorboard_folder='runs/BN')
+                  tensorboard_folder='runs/mytesting4')
