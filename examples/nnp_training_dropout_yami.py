@@ -24,7 +24,7 @@ import torch.utils.tensorboard
 import tqdm
 
 drop_prop = 0.1
-tensorboard_folder = 'runs/dropout{}'.format(drop_prop)
+tensorboard_folder = 'runs/dropout01'
 # data_file = 'ani1x-nacho-small'
 data_file = 'ani1-up_to_gdb4/ani_gdb_s03.h5'
 # device to run the training
