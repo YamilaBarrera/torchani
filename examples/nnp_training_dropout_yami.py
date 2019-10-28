@@ -26,7 +26,7 @@ import tqdm
 drop_prop = 0.1
 tensorboard_folder = 'runs/dropout01'
 # data_file = 'ani1x-nacho-small'
-data_file = 'ani1-up_to_gdb4/ani_gdb_s03.h5'
+data_file = 'ani1x-nacho-small'
 # device to run the training
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -327,7 +327,7 @@ tensorboard = torch.utils.tensorboard.SummaryWriter(tensorboard_folder)
 mse = torch.nn.MSELoss(reduction='none')
 
 print("training starting from epoch", AdamW_scheduler.last_epoch + 1)
-max_epochs = 10
+max_epochs = 500
 early_stopping_learning_rate = 1.0E-5
 best_model_checkpoint = os.path.join(tensorboard_folder, 'best.pt')
 
