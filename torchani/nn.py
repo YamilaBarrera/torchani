@@ -95,6 +95,14 @@ class Ensemble(torch.nn.Module):
         return species, sum_ / 8.0
 
 
+class EvalDropout(torch.nn.modules.Dropout):
+    def __init__(self, p=0.5, inplace=False):
+        super(EvalDropout, self).__init__(p=p, inplace=inplace)
+
+    def forward(self, input_):
+        return torch.nn.functional.dropout(input_, p=self.p, training=True, inplace=self.inplace)
+
+
 class Sequential(torch.nn.Module):
     """Modified Sequential module that accept Tuple type as input"""
 
